@@ -53,8 +53,7 @@ fun TaskCard(
             }
 
             Text(
-                text = task.category,
-                color = DarkFont
+                text = task.group?.name ?: "Sin grupo"
             )
             Row {
                 TextButton(

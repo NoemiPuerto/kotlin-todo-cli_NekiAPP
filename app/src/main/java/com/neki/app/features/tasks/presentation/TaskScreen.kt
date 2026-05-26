@@ -2,16 +2,16 @@ package com.neki.app.features.tasks.presentation
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.neki.app.ui.theme.NekiSpacing
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
+import com.neki.app.features.tasks.domain.Priority
+import com.neki.app.features.tasks.domain.SubTask
+import java.util.UUID
 
 @Composable
 fun TaskScreen(
@@ -19,27 +19,34 @@ fun TaskScreen(
 ) {
     var taskTitle by remember { mutableStateOf("") }
 
-    Column {
-        OutlinedTextField(
-            value = taskTitle,
-            onValueChange = { taskTitle = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = {
-                Text("New task")
-            }
-        )
+    var isExpanded by remember { mutableStateOf(false) }
 
-        Button(
-            onClick = {
-                taskViewModel.addTask(taskTitle)
-                taskTitle = ""
-            }
-        ) {
-            Text("Add")
-        }
+    var selectedPriority by remember {
+        mutableStateOf(Priority.MEDIUM)
+    }
 
+    var selectedGroup by remember {
+        mutableStateOf(taskViewModel.availableGroups.first())
+    }
+
+    var subTasks by remember {
+        mutableStateOf(listOf<SubTask>())
+    }
+
+    var selectedDueDate by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    var showDateSheet by remember {
+        mutableStateOf(false)
+    }
+
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
         LazyColumn(
-            contentPadding = PaddingValues(NekiSpacing.md)
+            contentPadding = PaddingValues(NekiSpacing.md),
+            modifier = Modifier.weight(1f)
         ) {
             items(taskViewModel.tasks) { task ->
                 TaskCard(
@@ -55,6 +62,70 @@ fun TaskScreen(
                     }
                 )
             }
+        }
+
+        QuickAddBar(
+            taskTitle = taskTitle,
+            onTaskTitleChange = {
+                taskTitle = it
+            },
+            onCreateClick = {
+                taskViewModel.addTask(
+                    title = taskTitle,
+                    priority = selectedPriority,
+                    group = selectedGroup,
+                    subTasks = subTasks,
+                    dueDate = selectedDueDate
+                )
+                taskTitle = ""
+                subTasks = emptyList()
+                selectedDueDate = null
+            },
+            onExpandClick = {
+                isExpanded = !isExpanded
+            }
+        )
+
+        if (isExpanded) {
+            ExpandedTaskComposer(
+                selectedPriority = selectedPriority,
+                selectedGroup = selectedGroup,
+                availableGroups = taskViewModel.availableGroups,
+                subTasks = subTasks,
+                selectedDueDate = selectedDueDate,
+                onPrioritySelected = {
+                    selectedPriority = it
+                },
+                onGroupSelected = {
+                    selectedGroup = it
+                },
+                onDateClick = {
+                    showDateSheet = true
+                },
+                onCreateGroup = { groupName ->
+                    taskViewModel.createGroup(groupName)
+                },
+                onAddSubTask = { title ->
+                    subTasks = subTasks + SubTask(
+                        id = UUID.randomUUID().toString(),
+                        title = title
+                    )
+                },
+                onRemoveSubTask = { subTask ->
+                    subTasks = subTasks - subTask
+                }
+            )
+        }
+
+        if (showDateSheet) {
+            DateSelectorSheet(
+                onDismiss = {
+                    showDateSheet = false
+                },
+                onDateSelected = { date ->
+                    selectedDueDate = date
+                }
+            )
         }
 
         taskViewModel.selectedTask?.let { selectedTask ->

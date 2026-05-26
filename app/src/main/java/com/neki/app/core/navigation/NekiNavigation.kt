@@ -1,7 +1,9 @@
 package com.neki.app.core.navigation
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -38,9 +40,11 @@ fun NekiNavigation() {
             )
         }
     ) { paddingValues ->
+
         NavHost(
             navController = navController,
-            startDestination = Routes.TASKS
+            startDestination = Routes.TASKS,
+            modifier = Modifier.padding(paddingValues)
         ) {
             composable(Routes.TASKS) {
                 TaskScreen()

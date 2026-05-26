@@ -1,15 +1,35 @@
 package com.neki.app.features.tasks.presentation
 
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.neki.app.features.tasks.domain.Priority
+import com.neki.app.features.tasks.domain.RepeatOption
 import com.neki.app.features.tasks.domain.SubTask
 import com.neki.app.features.tasks.domain.Task
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import com.neki.app.features.tasks.domain.TaskGroup
 
 class TaskViewModel : ViewModel() {
+    val availableGroups = mutableStateListOf(
+        TaskGroup(
+            id = "personal",
+            name = "Personal"
+        ),
+        TaskGroup(
+            id = "work",
+            name = "Trabajo"
+        ),
+        TaskGroup(
+            id = "study",
+            name = "Estudio"
+        ),
+        TaskGroup(
+            id = "health",
+            name = "Salud"
+        )
+    )
 
     val tasks = mutableStateListOf(
         Task(
@@ -17,39 +37,65 @@ class TaskViewModel : ViewModel() {
             title = "Analyze competitor workflows",
             description = "Study productivity app patterns",
             priority = Priority.HIGH,
-            category = "Research",
+            dueDate = "Oct 12",
+            group = TaskGroup(
+                id = "1",
+                name = "Research"
+            ),
             subTasks = listOf(
                 SubTask("1", "Review UI flows"),
                 SubTask("2", "Compare onboarding")
-            )
+            ),
+            notificationsEnabled = true,
+            repeatOption = RepeatOption.NONE
         ),
+
         Task(
             id = "2",
             title = "Design task creation flow",
             description = "Define interactions for editor screen",
             priority = Priority.MEDIUM,
-            category = "Design"
+            group = TaskGroup(
+                id = "2",
+                name = "Design"
+            )
         ),
+
         Task(
             id = "3",
             title = "Implement bottom navigation",
             completed = true,
             priority = Priority.LOW,
-            category = "Development"
+            group = TaskGroup(
+                id = "3",
+                name = "Development"
+            )
         )
     )
+
+    var selectedTask by mutableStateOf<Task?>(null)
+        private set
+
     fun toggleTaskCompletion(taskId: String) {
         val index = tasks.indexOfFirst { it.id == taskId }
 
         if (index != -1) {
             val task = tasks[index]
+
             tasks[index] = task.copy(
-                completed = !task.completed
+                completed = !task.completed,
+                updatedAt = System.currentTimeMillis()
             )
         }
     }
 
-    fun addTask(title: String) {
+    fun addTask(
+        title: String,
+        priority: Priority,
+        group: TaskGroup?,
+        subTasks: List<SubTask>,
+        dueDate: String?
+    ) {
         if (title.isBlank()) return
 
         tasks.add(
@@ -57,8 +103,10 @@ class TaskViewModel : ViewModel() {
             Task(
                 id = System.currentTimeMillis().toString(),
                 title = title,
-                priority = Priority.MEDIUM,
-                category = "Personal"
+                priority = priority,
+                group = group ?: availableGroups.first(),
+                dueDate = dueDate,
+                subTasks = subTasks
             )
         )
     }
@@ -66,9 +114,6 @@ class TaskViewModel : ViewModel() {
     fun deleteTask(taskId: String) {
         tasks.removeAll { it.id == taskId }
     }
-
-    var selectedTask by mutableStateOf<Task?>(null)
-        private set
 
     fun selectTask(task: Task) {
         selectedTask = task
@@ -82,7 +127,8 @@ class TaskViewModel : ViewModel() {
         val task = selectedTask ?: return
 
         val updatedTask = task.copy(
-            title = newTitle
+            title = newTitle,
+            updatedAt = System.currentTimeMillis()
         )
 
         val index = tasks.indexOfFirst { it.id == task.id }
@@ -91,5 +137,24 @@ class TaskViewModel : ViewModel() {
             tasks[index] = updatedTask
             selectedTask = updatedTask
         }
+    }
+
+    fun createGroup(name: String): TaskGroup {
+        val existingGroup = availableGroups.find {
+            it.name.equals(name, ignoreCase = true)
+        }
+
+        if (existingGroup != null) {
+            return existingGroup
+        }
+
+        val newGroup = TaskGroup(
+            id = name.lowercase().replace(" ", "_"),
+            name = name
+        )
+
+        availableGroups.add(newGroup)
+
+        return newGroup
     }
 }
