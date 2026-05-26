@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -20,7 +19,6 @@ import androidx.compose.ui.res.painterResource
 import com.neki.app.R
 import com.neki.app.features.tasks.domain.RepeatOption
 import com.neki.app.ui.theme.AlGreen
-import com.neki.app.ui.theme.BgSelectedElement
 import com.neki.app.ui.theme.DarkFont
 import com.neki.app.ui.theme.DkGreen
 import com.neki.app.ui.theme.NekiRadius
@@ -30,6 +28,20 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import com.neki.app.ui.components.NekiDashedDivider
+import com.neki.app.ui.components.NekiPrimaryButton
+import com.neki.app.ui.components.NekiButtonSize
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import com.neki.app.ui.theme.Typography
+import androidx.compose.ui.Alignment
+import com.neki.app.ui.theme.BgColor
+import com.neki.app.ui.theme.BgSelectedElement
+import com.neki.app.ui.theme.StrokeSelectedElement
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 
 private val mexicoLocale = Locale("es", "MX")
 private val displayFormatter = DateTimeFormatter.ofPattern("d MMM yyyy", mexicoLocale)
@@ -47,8 +59,12 @@ fun DateSelectorSheet(
         LocalDate.now(ZoneId.systemDefault())
     }
 
-    val selectedDate = remember(selectedDueDate, today) {
+    val initialSelectedDate = remember(selectedDueDate, today) {
         parseSelectedDate(selectedDueDate, today)
+    }
+
+    var pendingSelectedDate by remember {
+        mutableStateOf(initialSelectedDate)
     }
 
     var showTimePicker by remember {
@@ -73,7 +89,7 @@ fun DateSelectorSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = BgSelectedElement
+        containerColor = BgColor
     ) {
         Column(
             modifier = Modifier
@@ -83,30 +99,55 @@ fun DateSelectorSheet(
         ) {
             Text(
                 text = "Fecha",
-                color = DarkFont
+                color = DarkFont,
+                style = Typography.headlineMedium
             )
 
-            DateOption("Hoy") {
-                onDateSelected(today.toString())
+            DateOption(
+                label = "Hoy",
+                selected = pendingSelectedDate == today,
+                iconRes = R.drawable.ic_calendar,
+                trailingText = shortDayName(today.dayOfWeek)
+            ) {
+                pendingSelectedDate = today
             }
 
-            DateOption("Mañana") {
-                onDateSelected(today.plusDays(1).toString())
+            DateOption(
+                label = "Mañana",
+                selected = pendingSelectedDate == today.plusDays(1),
+                iconRes = R.drawable.ic_sun,
+                trailingText = shortDayName(today.plusDays(1).dayOfWeek)
+            ) {
+                pendingSelectedDate = today.plusDays(1)
             }
 
-            DateOption("Este fin de semana") {
-                onDateSelected(nextWeekend(today).toString())
+            DateOption(
+                label = "Este fin de semana",
+                selected = pendingSelectedDate == nextWeekend(today),
+                iconRes = R.drawable.ic_sofa,
+                trailingText = shortDayName(nextWeekend(today).dayOfWeek)
+            ) {
+                pendingSelectedDate = nextWeekend(today)
             }
 
-            DateOption("Próxima semana") {
-                onDateSelected(today.plusWeeks(1).toString())
+            DateOption(
+                label = "Próxima semana",
+                selected = pendingSelectedDate == today.plusWeeks(1),
+                iconRes = R.drawable.ic_arrow_right,
+                trailingText = formatDisplayDate(today.plusWeeks(1))
+            ) {
+                pendingSelectedDate = today.plusWeeks(1)
             }
 
-            DateOption("Sin fecha") {
-                onDateSelected(null)
+            DateOption(
+                label = "Sin fecha",
+                selected = pendingSelectedDate == null,
+                iconRes = R.drawable.ic_annoyed
+            ) {
+                pendingSelectedDate = null
             }
 
-            HorizontalDivider()
+            NekiDashedDivider()
 
             DateAction(
                 iconRes = R.drawable.ic_clock,
@@ -115,6 +156,8 @@ fun DateSelectorSheet(
                 showTimePicker = !showTimePicker
             }
 
+            NekiDashedDivider()
+
             DateAction(
                 iconRes = R.drawable.ic_repeat,
                 label = "Repetir"
@@ -122,11 +165,13 @@ fun DateSelectorSheet(
                 showRepeatMenu = true
             }
 
+            NekiDashedDivider()
+
             if (showRepeatMenu) {
                 RepeatMenuPopup(
-                    weeklyLabel = weeklyRepeatLabel(selectedDate),
-                    monthlyLabel = monthlyRepeatLabel(selectedDate),
-                    yearlyLabel = yearlyRepeatLabel(selectedDate),
+                    weeklyLabel = weeklyRepeatLabel(pendingSelectedDate),
+                    monthlyLabel = monthlyRepeatLabel(pendingSelectedDate),
+                    yearlyLabel = yearlyRepeatLabel(pendingSelectedDate),
 
                     onDismiss = {
                         showRepeatMenu = false
@@ -195,6 +240,21 @@ fun DateSelectorSheet(
                     }
                 )
             }
+
+            Spacer(
+                modifier = Modifier.height(NekiSpacing.md)
+            )
+
+            NekiPrimaryButton(
+                text = "Guardar",
+                size = NekiButtonSize.XL,
+                onClick = {
+                    onDateSelected(
+                        pendingSelectedDate?.toString()
+                    )
+                    onDismiss()
+                }
+            )
         }
     }
 }
@@ -202,18 +262,63 @@ fun DateSelectorSheet(
 @Composable
 private fun DateOption(
     label: String,
+    iconRes: Int,
+    trailingText: String? = null,
+    selected: Boolean = false,
     onClick: () -> Unit
 ) {
-    Text(
-        text = label,
+    Row(
         modifier = Modifier
             .fillMaxWidth()
+            .border(
+                width = if (selected) 1.dp else 0.dp,
+                color = if (selected) {
+                    StrokeSelectedElement
+                } else {
+                    androidx.compose.ui.graphics.Color.Transparent
+                },
+                shape = RoundedCornerShape(NekiRadius.lg)
+            )
+            .background(
+                color = if (selected) {
+                    BgSelectedElement
+                } else {
+                    androidx.compose.ui.graphics.Color.Transparent
+                },
+                shape = RoundedCornerShape(NekiRadius.lg)
+            )
             .clickable {
                 onClick()
             }
-            .padding(vertical = NekiSpacing.sm),
-        color = DarkFont
-    )
+            .padding(NekiSpacing.sm),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(NekiSpacing.md),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = label,
+                tint = DarkFont
+            )
+
+            Text(
+                text = label,
+                color = DarkFont,
+                style = Typography.bodyLarge
+            )
+        }
+
+        if (trailingText != null) {
+            Text(
+                text = trailingText,
+                color = DarkFont.copy(alpha = 0.6f),
+                style = Typography.bodyMedium
+            )
+        }
+    }
 }
 
 @Composable
