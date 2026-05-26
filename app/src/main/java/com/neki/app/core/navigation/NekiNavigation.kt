@@ -16,6 +16,9 @@ import com.neki.app.core.components.BottomNavigationBar
 import com.neki.app.features.focus.presentation.FocusScreen
 import com.neki.app.features.notes.presentation.NotesScreen
 import com.neki.app.features.tasks.presentation.TaskScreen
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
+import com.neki.app.features.loading.presentation.LoadingScreen
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
@@ -34,26 +37,41 @@ fun NekiNavigation() {
     Scaffold(
         containerColor = Color.Transparent,
         bottomBar = {
-            BottomNavigationBar(
-                items = items,
-                currentRoute = currentRoute,
-                onItemClick = { item ->
-                    navController.navigate(item.route) {
-                        popUpTo(navController.graph.startDestinationId) {
-                            saveState = true
+            if (currentRoute != null && currentRoute != Routes.LOADING) {
+                BottomNavigationBar(
+                    items = items,
+                    currentRoute = currentRoute,
+                    onItemClick = { item ->
+                        navController.navigate(item.route) {
+                            popUpTo(Routes.TASKS) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
                     }
-                }
-            )
+                )
+            }
         }
     ) {
         NavHost(
             navController = navController,
-            startDestination = Routes.TASKS,
+            startDestination = Routes.LOADING,
             modifier = Modifier.fillMaxSize()
         ) {
+            composable(Routes.LOADING) {
+                LaunchedEffect(Unit) {
+                    delay(2500)
+                    navController.navigate(Routes.TASKS) {
+                        popUpTo(Routes.LOADING) {
+                            inclusive = true
+                        }
+                    }
+                }
+
+                LoadingScreen()
+            }
+
             composable(Routes.TASKS) {
                 TaskScreen()
             }
