@@ -29,6 +29,8 @@ import com.neki.app.ui.theme.SemanticRed
 import com.neki.app.ui.theme.SemanticYellow
 import com.neki.app.ui.theme.SemanticBlue
 import com.neki.app.ui.theme.IconGray
+import java.time.LocalDate
+import java.time.ZoneId
 
 private fun priorityColor(priority: Priority): Color {
     return when (priority) {
@@ -75,7 +77,7 @@ fun ExpandedTaskComposer(
     onAddSubTask: (String) -> Unit,
     selectedDueDate: String?,
     onDateClick: () -> Unit,
-    onRemoveSubTask: (SubTask) -> Unit
+    onRemoveSubTask: (SubTask) -> Unit,
 ) {
     var priorityMenuExpanded by remember {
         mutableStateOf(false)
@@ -183,7 +185,10 @@ fun ExpandedTaskComposer(
                     )
 
                     Text(
-                        text = selectedDueDate ?: "Fecha"
+                        text = friendlyDateLabel(
+                            selectedDueDate,
+                            LocalDate.now(ZoneId.systemDefault())
+                        )
                     )
                 }
             }

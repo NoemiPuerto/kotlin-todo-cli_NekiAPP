@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import com.neki.app.features.tasks.domain.Priority
 import com.neki.app.features.tasks.domain.SubTask
 import java.util.UUID
+import com.neki.app.features.tasks.domain.RepeatOption
 
 @Composable
 fun TaskScreen(
@@ -39,6 +40,14 @@ fun TaskScreen(
 
     var showDateSheet by remember {
         mutableStateOf(false)
+    }
+
+    var selectedDueTime by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    var selectedRepeatOption by remember {
+        mutableStateOf(RepeatOption.NONE)
     }
 
     Column(
@@ -75,11 +84,15 @@ fun TaskScreen(
                     priority = selectedPriority,
                     group = selectedGroup,
                     subTasks = subTasks,
-                    dueDate = selectedDueDate
+                    dueDate = selectedDueDate,
+                    dueTime = selectedDueTime,
+                    repeatOption = selectedRepeatOption
                 )
                 taskTitle = ""
                 subTasks = emptyList()
                 selectedDueDate = null
+                selectedDueTime = null
+                selectedRepeatOption = RepeatOption.NONE
             },
             onExpandClick = {
                 isExpanded = !isExpanded
@@ -122,8 +135,15 @@ fun TaskScreen(
                 onDismiss = {
                     showDateSheet = false
                 },
+                selectedDueDate = selectedDueDate,
                 onDateSelected = { date ->
                     selectedDueDate = date
+                },
+                onTimeSelected = { time ->
+                    selectedDueTime = time
+                },
+                onRepeatSelected = { repeat ->
+                    selectedRepeatOption = repeat
                 }
             )
         }

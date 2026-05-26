@@ -94,7 +94,9 @@ class TaskViewModel : ViewModel() {
         priority: Priority,
         group: TaskGroup?,
         subTasks: List<SubTask>,
-        dueDate: String?
+        dueDate: String?,
+        dueTime: String?,
+        repeatOption: RepeatOption
     ) {
         if (title.isBlank()) return
 
@@ -106,6 +108,8 @@ class TaskViewModel : ViewModel() {
                 priority = priority,
                 group = group ?: availableGroups.first(),
                 dueDate = dueDate,
+                dueTime = dueTime,
+                repeatOption = repeatOption,
                 subTasks = subTasks
             )
         )
