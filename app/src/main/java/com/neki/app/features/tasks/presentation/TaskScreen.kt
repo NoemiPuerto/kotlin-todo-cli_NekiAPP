@@ -2,17 +2,19 @@ package com.neki.app.features.tasks.presentation
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.*
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.neki.app.ui.theme.NekiSpacing
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.neki.app.features.tasks.domain.Priority
-import com.neki.app.features.tasks.domain.SubTask
-import java.util.UUID
 import com.neki.app.features.tasks.domain.RepeatOption
+import com.neki.app.features.tasks.domain.SubTask
+import com.neki.app.ui.theme.NekiSpacing
+import java.util.UUID
 
 @Composable
 fun TaskScreen(
@@ -51,7 +53,9 @@ fun TaskScreen(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = 120.dp)
     ) {
         LazyColumn(
             contentPadding = PaddingValues(NekiSpacing.md),
