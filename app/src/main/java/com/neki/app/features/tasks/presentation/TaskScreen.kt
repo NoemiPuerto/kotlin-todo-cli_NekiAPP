@@ -37,7 +37,8 @@ import com.neki.app.R
 import com.neki.app.features.tasks.domain.Priority
 import com.neki.app.features.tasks.domain.RepeatOption
 import com.neki.app.features.tasks.domain.SubTask
-import com.neki.app.ui.theme.NekiSpacing
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 
 @Composable
@@ -76,24 +77,71 @@ fun TaskScreen(
         mutableStateOf(RepeatOption.NONE)
     }
 
+    val today = remember {
+        LocalDate.now(ZoneId.systemDefault())
+    }
+
+    var searchQuery by remember {
+        mutableStateOf("")
+    }
+
+    var selectedCalendarDate by remember {
+        mutableStateOf<LocalDate?>(null)
+    }
+
+    val filteredTasks = taskViewModel.tasks.filter { task ->
+        val query = searchQuery.trim()
+
+        val matchesSearch = query.isBlank() ||
+                task.title.contains(query, ignoreCase = true) ||
+                task.description.contains(query, ignoreCase = true) ||
+                task.group?.name?.contains(query, ignoreCase = true) == true
+
+        val taskDate = parseTaskDueDate(task.dueDate)
+
+        val matchesDate = selectedCalendarDate == null ||
+                taskDate == selectedCalendarDate
+
+        matchesSearch && matchesDate
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(bottom = 120.dp)
     ) {
+        TaskTopSection(
+            searchQuery = searchQuery,
+            onSearchQueryChange = {
+                searchQuery = it
+            },
+            today = today,
+            activeDateFilter = selectedCalendarDate,
+            onDateSelected = { date ->
+                selectedCalendarDate = if (selectedCalendarDate == date) {
+                    null
+                } else {
+                    date
+                }
+            },
+            modifier = Modifier.padding(top = 32.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Box(
             modifier = Modifier.weight(1f)
         ) {
-            if (taskViewModel.tasks.isEmpty()) {
+            if (filteredTasks.isEmpty()) {
                 EmptyTaskState(
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(NekiSpacing.md),
+                    contentPadding = PaddingValues(horizontal = 24.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(taskViewModel.tasks) { task ->
+                    items(filteredTasks) { task ->
                         TaskCard(
                             task = task,
                             onToggleComplete = {
@@ -251,7 +299,7 @@ private fun EmptyTaskState(
                     .alpha(plantAlpha)
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Text(
                 text = "Add task",
@@ -260,4 +308,14 @@ private fun EmptyTaskState(
             )
         }
     }
+}
+
+private fun parseTaskDueDate(
+    dueDate: String?
+): LocalDate? {
+    if (dueDate.isNullOrBlank()) return null
+
+    return runCatching {
+        LocalDate.parse(dueDate)
+    }.getOrNull()
 }
