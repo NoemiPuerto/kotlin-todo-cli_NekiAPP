@@ -40,8 +40,17 @@ import com.neki.app.ui.theme.BgSelectedElement
 import com.neki.app.ui.theme.StrokeSelectedElement
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.neki.app.features.tasks.presentation.NekiCalendar
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.SheetValue
 
 private val mexicoLocale = Locale("es", "MX")
 private val displayFormatter = DateTimeFormatter.ofPattern("d MMM yyyy", mexicoLocale)
@@ -87,15 +96,45 @@ fun DateSelectorSheet(
         mutableStateOf(true)
     }
 
+    var selectedRepeatOption by remember {
+        mutableStateOf(RepeatOption.NONE)
+    }
+
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = BgColor
+        sheetState = sheetState,
+        containerColor = BgColor,
+        dragHandle = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.25f)
+                        .height(6.dp)
+                        .background(
+                            color = AlGreen,
+                            shape = RoundedCornerShape(999.dp)
+                        )
+                )
+            }
+        }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(NekiSpacing.lg),
-            verticalArrangement = Arrangement.spacedBy(NekiSpacing.md)
+                .fillMaxHeight()
+                .padding(horizontal = NekiSpacing.lg)
+        ) {Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(NekiSpacing.sm)
         ) {
             Text(
                 text = "Fecha",
@@ -149,18 +188,35 @@ fun DateSelectorSheet(
 
             NekiDashedDivider()
 
+            NekiCalendar(
+                today = today,
+                selectedDate = pendingSelectedDate,
+                onDateSelected = { selected ->
+                    pendingSelectedDate = selected
+                }
+            )
+
             DateAction(
                 iconRes = R.drawable.ic_clock,
-                label = "Añadir hora"
+                label = "Añadir hora",
+                trailingText = selectedTimeLabel(
+                    hour,
+                    minute,
+                    isAm
+                )
             ) {
-                showTimePicker = !showTimePicker
+                showTimePicker = true
             }
 
             NekiDashedDivider()
 
             DateAction(
                 iconRes = R.drawable.ic_repeat,
-                label = "Repetir"
+                label = "Repetir",
+                trailingText = repeatDisplayLabel(
+                    selectedRepeatOption,
+                    pendingSelectedDate
+                )
             ) {
                 showRepeatMenu = true
             }
@@ -178,36 +234,43 @@ fun DateSelectorSheet(
                     },
 
                     onDailyClick = {
+                        selectedRepeatOption = RepeatOption.DAILY
                         onRepeatSelected(RepeatOption.DAILY)
                         showRepeatMenu = false
                     },
 
                     onWeeklyClick = {
+                        selectedRepeatOption = RepeatOption.WEEKLY
                         onRepeatSelected(RepeatOption.WEEKLY)
                         showRepeatMenu = false
                     },
 
                     onWorkdaysClick = {
+                        selectedRepeatOption = RepeatOption.WORKDAYS
                         onRepeatSelected(RepeatOption.WORKDAYS)
                         showRepeatMenu = false
                     },
 
                     onMonthlyClick = {
+                        selectedRepeatOption = RepeatOption.MONTHLY
                         onRepeatSelected(RepeatOption.MONTHLY)
                         showRepeatMenu = false
                     },
 
                     onYearlyClick = {
+                        selectedRepeatOption = RepeatOption.YEARLY
                         onRepeatSelected(RepeatOption.YEARLY)
                         showRepeatMenu = false
                     },
 
                     onCustomClick = {
+                        selectedRepeatOption = RepeatOption.CUSTOM
                         onRepeatSelected(RepeatOption.CUSTOM)
                         showRepeatMenu = false
                     },
 
                     onClearClick = {
+                        selectedRepeatOption = RepeatOption.NONE
                         onRepeatSelected(RepeatOption.NONE)
                         showRepeatMenu = false
                     }
@@ -215,32 +278,42 @@ fun DateSelectorSheet(
             }
 
             if (showTimePicker) {
-                TimePickerInline(
+                TimePickerPopup(
                     hour = hour,
                     minute = minute,
                     isAm = isAm,
-                    onHourIncrement = {
-                        hour = if (hour == 12) 1 else hour + 1
+
+                    onDismiss = {
+                        showTimePicker = false
                     },
-                    onMinuteIncrement = {
-                        minute = if (minute == 59) 0 else minute + 1
-                    },
+
                     onAmSelected = {
                         isAm = true
                     },
+
                     onPmSelected = {
                         isAm = false
                     },
-                    onConfirm = {
+
+                    onConfirm = { selectedHour, selectedMinute ->
+                        hour = selectedHour
+                        minute = selectedMinute
+
                         val period = if (isAm) "AM" else "PM"
 
                         onTimeSelected(
-                            "%02d:%02d %s".format(hour, minute, period)
+                            "%02d:%02d %s".format(
+                                selectedHour,
+                                selectedMinute,
+                                period
+                            )
                         )
+
+                        showTimePicker = false
                     }
                 )
             }
-
+        }
             Spacer(
                 modifier = Modifier.height(NekiSpacing.md)
             )
@@ -325,6 +398,7 @@ private fun DateOption(
 private fun DateAction(
     iconRes: Int,
     label: String,
+    trailingText: String? = null,
     onClick: () -> Unit
 ) {
     Row(
@@ -334,93 +408,34 @@ private fun DateAction(
                 onClick()
             }
             .padding(vertical = NekiSpacing.sm),
-        horizontalArrangement = Arrangement.spacedBy(NekiSpacing.sm)
-    ) {
-        Icon(
-            painter = painterResource(iconRes),
-            contentDescription = label
-        )
-
-        Text(
-            text = label,
-            color = DarkFont
-        )
-    }
-}
-
-@Composable
-private fun TimePickerInline(
-    hour: Int,
-    minute: Int,
-    isAm: Boolean,
-    onHourIncrement: () -> Unit,
-    onMinuteIncrement: () -> Unit,
-    onAmSelected: () -> Unit,
-    onPmSelected: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(NekiSpacing.md)
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(NekiSpacing.md)
+            horizontalArrangement = Arrangement.spacedBy(NekiSpacing.md),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            TimeBlock(
-                value = "%02d".format(hour),
-                onClick = onHourIncrement
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = label,
+                tint = DarkFont
             )
 
             Text(
-                text = ":",
-                color = DarkFont
+                text = label,
+                color = DarkFont,
+                style = Typography.bodyLarge
             )
-
-            TimeBlock(
-                value = "%02d".format(minute),
-                onClick = onMinuteIncrement
-            )
-
-            Column {
-                OutlinedButton(
-                    onClick = onAmSelected
-                ) {
-                    Text("AM")
-                }
-
-                OutlinedButton(
-                    onClick = onPmSelected
-                ) {
-                    Text("PM")
-                }
-            }
         }
 
-        OutlinedButton(
-            onClick = onConfirm
-        ) {
-            Text("Guardar")
+        if (trailingText != null) {
+            Text(
+                text = trailingText,
+                color = DarkFont.copy(alpha = 0.6f),
+                style = Typography.bodyMedium
+            )
         }
     }
-}
-
-@Composable
-private fun TimeBlock(
-    value: String,
-    onClick: () -> Unit
-) {
-    Text(
-        text = value,
-        modifier = Modifier
-            .background(
-                color = AlGreen,
-                shape = RoundedCornerShape(NekiRadius.lg)
-            )
-            .clickable {
-                onClick()
-            }
-            .padding(NekiSpacing.xxl),
-        color = DkGreen
-    )
 }
 
 private fun parseSelectedDate(
@@ -507,5 +522,34 @@ private fun shortDayName(dayOfWeek: DayOfWeek): String {
         DayOfWeek.FRIDAY -> "vie"
         DayOfWeek.SATURDAY -> "sáb"
         DayOfWeek.SUNDAY -> "dom"
+    }
+}
+
+private fun selectedTimeLabel(
+    hour: Int,
+    minute: Int,
+    isAm: Boolean
+): String {
+    val period = if (isAm) "AM" else "PM"
+
+    return "%02d:%02d %s".format(
+        hour,
+        minute,
+        period
+    )
+}
+
+private fun repeatDisplayLabel(
+    option: RepeatOption,
+    selectedDate: LocalDate?
+): String {
+    return when (option) {
+        RepeatOption.DAILY -> "Cada día"
+        RepeatOption.WEEKLY -> weeklyRepeatLabel(selectedDate)
+        RepeatOption.WORKDAYS -> "Cada día laborable"
+        RepeatOption.MONTHLY -> monthlyRepeatLabel(selectedDate)
+        RepeatOption.YEARLY -> yearlyRepeatLabel(selectedDate)
+        RepeatOption.CUSTOM -> "Personalizada"
+        RepeatOption.NONE -> "Repetir"
     }
 }
