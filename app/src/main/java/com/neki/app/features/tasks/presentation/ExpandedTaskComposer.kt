@@ -11,7 +11,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -31,6 +30,22 @@ import com.neki.app.ui.theme.SemanticBlue
 import com.neki.app.ui.theme.IconGray
 import java.time.LocalDate
 import java.time.ZoneId
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import com.neki.app.ui.components.NekiDashedDivider
+import com.neki.app.ui.theme.StrokeDiscardElement
+import com.neki.app.ui.components.NekiActionChip
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Shapes
+import androidx.compose.ui.graphics.PathSegment
+import com.neki.app.ui.theme.AlGreen
+import com.neki.app.ui.theme.DarkFont
+import com.neki.app.ui.theme.Typography
 
 private fun priorityColor(priority: Priority): Color {
     return when (priority) {
@@ -87,40 +102,58 @@ fun ExpandedTaskComposer(
         mutableStateOf("")
     }
 
-    Surface(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = NekiSpacing.md),
-        shape = RoundedCornerShape(NekiRadius.lg),
-        color = BgSelectedElement
+            .padding(horizontal = NekiSpacing.md)
+            .border(
+                width = 1.dp,
+                color = StrokeDiscardElement,
+                shape = RoundedCornerShape(NekiRadius.xl)
+            )
+            .background(
+                color = BgSelectedElement,
+                shape = RoundedCornerShape(NekiRadius.xl)
+            )
+            .padding(NekiSpacing.md)
     ) {
         Column(
-            modifier = Modifier.padding(NekiSpacing.md),
             verticalArrangement = Arrangement.spacedBy(NekiSpacing.md)
         ) {
-            OutlinedButton(
-                onClick = {
-                    priorityMenuExpanded = true
-                }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(NekiSpacing.sm),
+                verticalArrangement = Arrangement.spacedBy(NekiSpacing.sm)
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(NekiSpacing.sm)
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_flag),
-                        contentDescription = "Prioridad",
-                        tint = priorityColor(selectedPriority)
-                    )
+                NekiActionChip(
+                    iconRes = R.drawable.ic_calendar,
+                    label = friendlyDateLabel(
+                        selectedDueDate,
+                        LocalDate.now(ZoneId.systemDefault())
+                    ),
+                    onClick = onDateClick
+                )
 
-                    Text(
-                        text = when (selectedPriority) {
-                            Priority.LOW -> "Prioridad 4"
-                            Priority.MEDIUM -> "Prioridad 3"
-                            Priority.HIGH -> "Prioridad 2"
-                            Priority.URGENT -> "Prioridad 1"
-                        }
-                    )
-                }
+                NekiActionChip(
+                    iconRes = R.drawable.ic_flag,
+                    label = when (selectedPriority) {
+                        Priority.LOW -> "Prioridad 4"
+                        Priority.MEDIUM -> "Prioridad 3"
+                        Priority.HIGH -> "Prioridad 2"
+                        Priority.URGENT -> "Prioridad 1"
+                    },
+                    iconTint = priorityColor(selectedPriority),
+                    onClick = {
+                        priorityMenuExpanded = true
+                    }
+                )
+
+                NekiActionChip(
+                    iconRes = R.drawable.ic_bell,
+                    label = "Notificar",
+                    onClick = {
+                        // TODO
+                    }
+                )
             }
 
             DropdownMenu(
@@ -166,64 +199,67 @@ fun ExpandedTaskComposer(
                 )
             }
 
-            GroupSelector(
-                selectedGroup = selectedGroup,
-                availableGroups = availableGroups,
-                onGroupSelected = onGroupSelected,
-                onCreateGroup = onCreateGroup
+
+
+            NekiDashedDivider()
+
+            Text(
+                text = "Sub tareas"
             )
 
-            OutlinedButton(
-                onClick = onDateClick
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(NekiSpacing.sm),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(NekiSpacing.sm)
+                Box(
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_calendar),
-                        contentDescription = "Fecha"
-                    )
-
-                    Text(
-                        text = friendlyDateLabel(
-                            selectedDueDate,
-                            LocalDate.now(ZoneId.systemDefault())
+                    if (subTaskInput.isEmpty()) {
+                        Text(
+                            text = "Escribe sub tarea...",
+                            color = DarkFont.copy(alpha = 0.5f),
+                            style = Typography.labelMedium
                         )
+                    }
+
+                    BasicTextField(
+                        value = subTaskInput,
+                        onValueChange = {
+                            subTaskInput = it
+                        },
+                        singleLine = true,
+                        textStyle = _root_ide_package_.com.neki.app.ui.theme.Typography.labelMedium.copy(
+                            color = DarkFont
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
-            }
 
-            Text("Sub tareas")
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(NekiSpacing.sm)
-            ) {
-                OutlinedTextField(
-                    value = subTaskInput,
-                    onValueChange = {
-                        subTaskInput = it
-                    },
-                    modifier = Modifier.weight(1f),
-                    placeholder = {
-                        Text("Escribe sub tarea...")
-                    },
-                    singleLine = true
-                )
-
-                OutlinedButton(
-                    onClick = {
-                        if (subTaskInput.isNotBlank()) {
-                            onAddSubTask(subTaskInput)
-                            subTaskInput = ""
-                        }
-                    }
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(
+                            color = AlGreen,
+                            shape = RoundedCornerShape(999.dp),
+                        )
+                        .clickable {
+                            if (subTaskInput.isNotBlank()) {
+                                onAddSubTask(subTaskInput)
+                                subTaskInput = ""
+                            }
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_plus),
-                        contentDescription = "Agregar subtarea"
+                        contentDescription = "Agregar subtarea",
+                        tint = DarkFont
                     )
                 }
             }
+
+            NekiDashedDivider()
 
             subTasks.forEach { subTask ->
                 Row(
@@ -244,6 +280,13 @@ fun ExpandedTaskComposer(
                     }
                 }
             }
+
+            GroupSelector(
+                selectedGroup = selectedGroup,
+                availableGroups = availableGroups,
+                onGroupSelected = onGroupSelected,
+                onCreateGroup = onCreateGroup
+            )
         }
     }
 }
