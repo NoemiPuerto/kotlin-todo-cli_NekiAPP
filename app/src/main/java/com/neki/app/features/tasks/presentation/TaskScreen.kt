@@ -40,7 +40,8 @@ import com.neki.app.features.tasks.domain.SubTask
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
-
+import androidx.compose.foundation.background
+import com.neki.app.ui.theme.BgColor
 @Composable
 fun TaskScreen(
     taskViewModel: TaskViewModel = viewModel()
@@ -108,6 +109,7 @@ fun TaskScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(BgColor)
             .padding(bottom = 120.dp)
     ) {
         TaskTopSection(
@@ -174,6 +176,7 @@ fun TaskScreen(
                     dueTime = selectedDueTime,
                     repeatOption = selectedRepeatOption
                 )
+
                 taskTitle = ""
                 subTasks = emptyList()
                 selectedDueDate = null
