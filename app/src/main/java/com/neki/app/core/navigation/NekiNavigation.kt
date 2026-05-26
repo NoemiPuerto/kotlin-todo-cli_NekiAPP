@@ -10,6 +10,8 @@ import com.neki.app.core.components.BottomNavigationBar
 import com.neki.app.features.focus.presentation.FocusScreen
 import com.neki.app.features.notes.presentation.NotesScreen
 import com.neki.app.features.tasks.presentation.TaskScreen
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
 
 @Composable
 fun NekiNavigation() {
@@ -40,7 +42,8 @@ fun NekiNavigation() {
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = Routes.TASKS
+            startDestination = Routes.TASKS,
+            modifier = Modifier.padding(paddingValues)
         ) {
             composable(Routes.TASKS) {
                 TaskScreen()
