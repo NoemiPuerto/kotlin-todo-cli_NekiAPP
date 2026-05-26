@@ -1,6 +1,6 @@
 package com.neki.app.core.navigation
 
-import androidx.compose.foundation.layout.padding
+import com.neki.app.R
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -12,21 +12,25 @@ import com.neki.app.core.components.BottomNavigationBar
 import com.neki.app.features.focus.presentation.FocusScreen
 import com.neki.app.features.notes.presentation.NotesScreen
 import com.neki.app.features.tasks.presentation.TaskScreen
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.padding
 
 @Composable
 fun NekiNavigation() {
     val navController = rememberNavController()
 
     val items = listOf(
-        BottomNavItem(Routes.TASKS, "Tasks"),
-        BottomNavItem(Routes.FOCUS, "Focus"),
-        BottomNavItem(Routes.NOTES, "Notes")
+        BottomNavItem(Routes.TASKS, "Tasks", R.drawable.ic_bulletlist),
+        BottomNavItem(Routes.FOCUS, "Focus", R.drawable.ic_clock),
+        BottomNavItem(Routes.NOTES, "Notes", R.drawable.ic_note)
     )
 
     val navBackStackEntry = navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry.value?.destination?.route
 
     Scaffold(
+        containerColor = Color.Transparent,
         bottomBar = {
             BottomNavigationBar(
                 items = items,
@@ -40,11 +44,12 @@ fun NekiNavigation() {
             )
         }
     ) { paddingValues ->
-
         NavHost(
             navController = navController,
             startDestination = Routes.TASKS,
-            modifier = Modifier.padding(paddingValues)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
         ) {
             composable(Routes.TASKS) {
                 TaskScreen()
