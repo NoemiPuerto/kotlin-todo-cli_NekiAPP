@@ -42,6 +42,8 @@ import com.neki.app.ui.theme.IconGray
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
+import androidx.compose.ui.zIndex
+import androidx.compose.foundation.layout.imePadding
 
 @Composable
 fun TaskScreen(
@@ -115,7 +117,7 @@ fun TaskScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 150.dp)
+                .padding(bottom = 205.dp)
         ) {
             TaskTopSection(
                 searchQuery = searchQuery,
@@ -175,11 +177,13 @@ fun TaskScreen(
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
+                    .imePadding()
                     .padding(
                         start = 24.dp,
                         end = 24.dp,
-                        bottom = 152.dp
+                        bottom = 230.dp
                     )
+                    .zIndex(2f)
             ) {
                 ExpandedTaskComposer(
                     selectedPriority = selectedPriority,
@@ -240,7 +244,9 @@ fun TaskScreen(
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
+                .imePadding()
                 .padding(bottom = 118.dp)
+                .zIndex(1f)
         )
 
         if (showDateSheet) {
