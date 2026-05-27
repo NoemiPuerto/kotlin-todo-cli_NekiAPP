@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -61,9 +63,15 @@ import com.neki.app.ui.theme.LgGreen
 import com.neki.app.ui.theme.NekiSpacing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
+import com.neki.app.features.tasks.domain.SubTask
+import com.neki.app.features.tasks.domain.Task
+import com.neki.app.features.tasks.presentation.TaskViewModel
 
 @Composable
-fun FocusScreen() {
+fun FocusScreen(
+    taskViewModel: TaskViewModel
+) {
     var focusMinutes by rememberSaveable { mutableIntStateOf(25) }
     var breakMinutes by rememberSaveable { mutableIntStateOf(5) }
     var isBreak by rememberSaveable { mutableStateOf(false) }
@@ -73,11 +81,23 @@ fun FocusScreen() {
     }
 
     var isRunning by rememberSaveable { mutableStateOf(false) }
-    var isMuted by rememberSaveable { mutableStateOf(false) }
+    var isBrownNoiseMuted by rememberSaveable { mutableStateOf(false) }
     var isSelectingTime by rememberSaveable { mutableStateOf(false) }
 
-    var selectedTask by rememberSaveable {
-        mutableStateOf("Research Design Trends")
+    val focusTasks = taskViewModel.tasks.filter { !it.completed }
+    val taskTitles = focusTasks.map { it.title }.ifEmpty { listOf("Sin tarea seleccionada") }
+
+    var selectedTaskId by rememberSaveable {
+        mutableStateOf(focusTasks.firstOrNull()?.id)
+    }
+
+    val selectedFocusTask = focusTasks.firstOrNull { it.id == selectedTaskId }
+    val selectedTask = selectedFocusTask?.title ?: "Sin tarea seleccionada"
+
+    LaunchedEffect(focusTasks.map { it.id }) {
+        if (selectedTaskId == null || focusTasks.none { it.id == selectedTaskId }) {
+            selectedTaskId = focusTasks.firstOrNull()?.id
+        }
     }
 
     var taskMenuExpanded by remember { mutableStateOf(false) }
@@ -105,8 +125,8 @@ fun FocusScreen() {
         }
     }
 
-    LaunchedEffect(isRunning, isMuted) {
-        if (isRunning && !isMuted) {
+    LaunchedEffect(isRunning, isBrownNoiseMuted) {
+        if (isRunning && !isBrownNoiseMuted) {
             if (!brownNoisePlayer.isPlaying) {
                 brownNoisePlayer.start()
             }
@@ -126,12 +146,10 @@ fun FocusScreen() {
 
     LaunchedEffect(remainingSeconds) {
         if (remainingSeconds == 0) {
-            if (!isMuted) {
-                toneGenerator.startTone(
-                    ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD,
-                    700
-                )
-            }
+            toneGenerator.startTone(
+                ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD,
+                700
+            )
 
             isBreak = !isBreak
 
@@ -182,9 +200,12 @@ fun FocusScreen() {
                 ) {
                     TaskSelector(
                         selectedTask = selectedTask,
+                        taskOptions = taskTitles,
                         expanded = taskMenuExpanded,
                         onExpandedChange = { taskMenuExpanded = it },
-                        onTaskSelected = { selectedTask = it }
+                        onTaskSelected = { taskTitle ->
+                            selectedTaskId = focusTasks.firstOrNull { it.title == taskTitle }?.id
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(NekiSpacing.xl))
@@ -281,11 +302,27 @@ fun FocusScreen() {
                 Spacer(modifier = Modifier.height(18.dp))
 
                 MuteButton(
-                    isMuted = isMuted,
+                    isMuted = isBrownNoiseMuted,
                     onClick = {
-                        isMuted = !isMuted
+                        isBrownNoiseMuted = !isBrownNoiseMuted
                     }
                 )
+
+                selectedFocusTask?.takeIf { it.subTasks.isNotEmpty() }?.let { task ->
+                    Spacer(modifier = Modifier.height(14.dp))
+                    FocusSubTasksCard(
+                        task = task,
+                        onToggleSubTask = { subTask ->
+                            taskViewModel.updateTask(
+                                task.copy(
+                                    subTasks = task.subTasks.map {
+                                        if (it.id == subTask.id) it.copy(completed = !it.completed) else it
+                                    }
+                                )
+                            )
+                        }
+                    )
+                }
             }
         }
     }
@@ -294,6 +331,7 @@ fun FocusScreen() {
 @Composable
 private fun TaskSelector(
     selectedTask: String,
+    taskOptions: List<String>,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onTaskSelected: (String) -> Unit
@@ -329,7 +367,7 @@ private fun TaskSelector(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 Text(
-                    text = "Internal Branding",
+                    text = "Tarea" ,
                     color = DarkFont,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
@@ -351,12 +389,7 @@ private fun TaskSelector(
                     onExpandedChange(false)
                 }
             ) {
-                listOf(
-                    "Research Design Trends",
-                    "Diseñar pantalla Pomodoro",
-                    "Revisar tareas",
-                    "Estudiar Android Studio"
-                ).forEach { task ->
+                taskOptions.forEach { task ->
                     DropdownMenuItem(
                         text = {
                             Text(task)
@@ -399,6 +432,7 @@ private fun FocusMinutePicker(
 ) {
     val minutesOptions = listOf<Int?>(null) + (1..120).toList() + listOf<Int?>(null)
     val itemHeight = 46.dp
+    val coroutineScope = rememberCoroutineScope()
 
     val listState = rememberLazyListState(
         initialFirstVisibleItemIndex = selectedMinutes.coerceIn(1, 120) - 1
@@ -452,6 +486,9 @@ private fun FocusMinutePicker(
                                 onDone()
                             } else if (minute != null) {
                                 onMinuteChanged(minute)
+                                coroutineScope.launch {
+                                    listState.animateScrollToItem((minute - 1).coerceAtLeast(0))
+                                }
                             }
                         },
                     contentAlignment = Alignment.Center
@@ -479,6 +516,66 @@ private fun FocusMinutePicker(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FocusSubTasksCard(
+    task: Task,
+    onToggleSubTask: (SubTask) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color.White.copy(alpha = 0.72f))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(
+            text = "Siguiente paso",
+            color = DkGreen,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        val visibleSubTasks = task.subTasks.sortedBy { it.completed }.take(4)
+        visibleSubTasks.forEach { subTask ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(BgUnselectedElement.copy(alpha = 0.82f))
+                    .clickable { onToggleSubTask(subTask) }
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    painter = painterResource(
+                        if (subTask.completed) R.drawable.ic_checkbox_on else R.drawable.ic_checkbox
+                    ),
+                    contentDescription = if (subTask.completed) "Subtarea completada" else "Subtarea pendiente",
+                    tint = IconGray,
+                    modifier = Modifier.size(18.dp)
+                )
+
+                Text(
+                    text = subTask.title,
+                    color = DarkFont,
+                    fontSize = 13.sp,
+                    maxLines = 1
+                )
+            }
+        }
+
+        if (task.subTasks.size > visibleSubTasks.size) {
+            Text(
+                text = "+${task.subTasks.size - visibleSubTasks.size} subtareas más",
+                color = IconGray,
+                fontSize = 12.sp
+            )
         }
     }
 }

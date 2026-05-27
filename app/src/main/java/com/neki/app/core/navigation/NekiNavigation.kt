@@ -16,6 +16,8 @@ import com.neki.app.core.components.BottomNavigationBar
 import com.neki.app.features.focus.presentation.FocusScreen
 import com.neki.app.features.notes.presentation.NotesScreen
 import com.neki.app.features.tasks.presentation.TaskScreen
+import com.neki.app.features.tasks.presentation.TaskViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
 import com.neki.app.features.loading.presentation.LoadingScreen
@@ -24,6 +26,7 @@ import com.neki.app.features.loading.presentation.LoadingScreen
 @Composable
 fun NekiNavigation() {
     val navController = rememberNavController()
+    val taskViewModel: TaskViewModel = viewModel()
 
     val items = listOf(
         BottomNavItem(Routes.TASKS, "Tasks", R.drawable.ic_bulletlist),
@@ -73,11 +76,11 @@ fun NekiNavigation() {
             }
 
             composable(Routes.TASKS) {
-                TaskScreen()
+                TaskScreen(taskViewModel = taskViewModel)
             }
 
             composable(Routes.FOCUS) {
-                FocusScreen()
+                FocusScreen(taskViewModel = taskViewModel)
             }
 
             composable(Routes.NOTES) {

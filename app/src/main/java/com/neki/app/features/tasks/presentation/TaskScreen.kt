@@ -1,5 +1,13 @@
 package com.neki.app.features.tasks.presentation
 
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.neki.app.features.tasks.domain.Attachment
+import com.neki.app.features.tasks.domain.AttachmentType
+import com.neki.app.features.tasks.domain.Task
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -44,6 +52,7 @@ import java.time.ZoneId
 import java.util.UUID
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun TaskScreen(
@@ -65,6 +74,10 @@ fun TaskScreen(
         mutableStateOf(listOf<SubTask>())
     }
 
+    var attachments by remember {
+        mutableStateOf(listOf<Attachment>())
+    }
+
     var selectedDueDate by remember {
         mutableStateOf<String?>(null)
     }
@@ -79,6 +92,22 @@ fun TaskScreen(
 
     var selectedRepeatOption by remember {
         mutableStateOf(RepeatOption.NONE)
+    }
+
+    var notificationsEnabled by remember {
+        mutableStateOf(false)
+    }
+
+    val context = LocalContext.current
+    val attachmentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            attachments = attachments + uris.map { uri ->
+                context.contentResolver.takePersistableUriPermissionSafely(uri)
+                uri.toTaskAttachment(context)
+            }
+        }
     }
 
     val today = remember {
@@ -107,7 +136,10 @@ fun TaskScreen(
                 taskDate == selectedCalendarDate
 
         matchesSearch && matchesDate
-    }
+    }.sortedWith(
+        compareBy<Task> { it.completed }
+            .thenByDescending { it.updatedAt }
+    )
 
     Box(
         modifier = Modifier
@@ -181,7 +213,7 @@ fun TaskScreen(
                     .padding(
                         start = 24.dp,
                         end = 24.dp,
-                        bottom = 230.dp
+                        bottom = 132.dp
                     )
                     .zIndex(2f)
             ) {
@@ -190,6 +222,7 @@ fun TaskScreen(
                     selectedGroup = selectedGroup,
                     availableGroups = taskViewModel.availableGroups,
                     subTasks = subTasks,
+                    attachments = attachments,
                     selectedDueDate = selectedDueDate,
                     onPrioritySelected = {
                         selectedPriority = it
@@ -199,6 +232,16 @@ fun TaskScreen(
                     },
                     onDateClick = {
                         showDateSheet = true
+                    },
+                    notificationsEnabled = notificationsEnabled,
+                    onNotificationsClick = {
+                        notificationsEnabled = !notificationsEnabled
+                    },
+                    onAttachmentClick = {
+                        attachmentLauncher.launch(arrayOf("image/*", "video/*", "application/pdf", "text/*", "application/*"))
+                    },
+                    onRemoveAttachment = { attachment ->
+                        attachments = attachments - attachment
                     },
                     onCreateGroup = { groupName ->
                         taskViewModel.createGroup(groupName)
@@ -211,6 +254,9 @@ fun TaskScreen(
                     },
                     onRemoveSubTask = { subTask ->
                         subTasks = subTasks - subTask
+                    },
+                    onDismiss = {
+                        isExpanded = false
                     }
                 )
             }
@@ -227,16 +273,20 @@ fun TaskScreen(
                     priority = selectedPriority,
                     group = selectedGroup,
                     subTasks = subTasks,
+                    attachments = attachments,
                     dueDate = selectedDueDate,
                     dueTime = selectedDueTime,
-                    repeatOption = selectedRepeatOption
+                    repeatOption = selectedRepeatOption,
+                    notificationsEnabled = notificationsEnabled
                 )
 
                 taskTitle = ""
                 subTasks = emptyList()
+                attachments = emptyList()
                 selectedDueDate = null
                 selectedDueTime = null
                 selectedRepeatOption = RepeatOption.NONE
+                notificationsEnabled = false
                 isExpanded = false
             },
             onExpandClick = {
@@ -354,5 +404,37 @@ private fun parseTaskDueDate(
 
     return runCatching {
         LocalDate.parse(dueDate)
+    }.getOrNull()
+}
+
+private fun android.content.ContentResolver.takePersistableUriPermissionSafely(uri: Uri) {
+    runCatching {
+        takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+}
+
+private fun Uri.toTaskAttachment(context: Context): Attachment {
+    val mimeType = context.contentResolver.getType(this).orEmpty()
+    val attachmentType = when {
+        mimeType.startsWith("image/") -> AttachmentType.IMAGE
+        mimeType.startsWith("video/") -> AttachmentType.VIDEO
+        mimeType == "application/pdf" || mimeType.startsWith("text/") -> AttachmentType.DOCUMENT
+        else -> AttachmentType.FILE
+    }
+
+    return Attachment(
+        id = UUID.randomUUID().toString(),
+        type = attachmentType,
+        uri = toString(),
+        name = resolveDisplayName(context) ?: lastPathSegment ?: "Adjunto"
+    )
+}
+
+private fun Uri.resolveDisplayName(context: Context): String? {
+    return runCatching {
+        context.contentResolver.query(this, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (nameIndex >= 0 && cursor.moveToFirst()) cursor.getString(nameIndex) else null
+        }
     }.getOrNull()
 }

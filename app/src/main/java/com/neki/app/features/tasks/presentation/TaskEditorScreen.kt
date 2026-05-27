@@ -21,6 +21,13 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
@@ -31,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.neki.app.R
+import com.neki.app.features.tasks.domain.Attachment
+import com.neki.app.features.tasks.domain.AttachmentType
 import com.neki.app.features.tasks.domain.Priority
 import com.neki.app.features.tasks.domain.RepeatOption
 import com.neki.app.features.tasks.domain.SubTask
@@ -83,6 +92,10 @@ fun TaskEditorScreen(
         mutableStateOf(task.repeatOption)
     }
 
+    var notificationsEnabled by remember(task.id) {
+        mutableStateOf(task.notificationsEnabled)
+    }
+
     var showDateSheet by remember {
         mutableStateOf(false)
     }
@@ -90,6 +103,28 @@ fun TaskEditorScreen(
     val editableSubTasks = remember(task.id) {
         mutableStateListOf<SubTask>().apply {
             addAll(task.subTasks)
+        }
+    }
+
+    val editableAttachments = remember(task.id) {
+        mutableStateListOf<Attachment>().apply {
+            addAll(task.attachments)
+        }
+    }
+
+    val context = LocalContext.current
+    val documentPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        uris.forEach { uri ->
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+
+            editableAttachments.add(uri.toEditorAttachment(context))
         }
     }
 
@@ -200,6 +235,13 @@ fun TaskEditorScreen(
                 TaskInfoRow(
                     label = "Grupo",
                     value = task.group?.name ?: "Sin grupo"
+                )
+
+                ToggleInfoButton(
+                    label = "Notificación",
+                    value = if (notificationsEnabled) "Activada" else "Desactivada",
+                    selected = notificationsEnabled,
+                    onClick = { notificationsEnabled = !notificationsEnabled }
                 )
 
                 Text(
@@ -322,6 +364,58 @@ fun TaskEditorScreen(
                     }
                 }
 
+                Text(
+                    text = "Adjuntos",
+                    color = IconGray,
+                    fontSize = 14.sp,
+                    fontFamily = PixelFont,
+                    fontWeight = FontWeight.Medium
+                )
+
+                EditorActionButton(
+                    text = "Adjuntar archivo",
+                    backgroundColor = BgUnselectedElement,
+                    textColor = DkGreen,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        documentPicker.launch(arrayOf("image/*", "video/*", "application/pdf", "text/*", "application/*"))
+                    }
+                )
+
+                editableAttachments.forEach { attachment ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                color = BgUnselectedElement,
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = attachment.name,
+                            color = DarkFont,
+                            fontSize = 14.sp,
+                            fontFamily = PixelFont,
+                            fontWeight = FontWeight.Normal,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        Text(
+                            text = "Quitar",
+                            color = SemanticRed,
+                            fontSize = 12.sp,
+                            fontFamily = PixelFont,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clickable {
+                                editableAttachments.remove(attachment)
+                            }
+                        )
+                    }
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -358,7 +452,9 @@ fun TaskEditorScreen(
                                         dueDate = dueDate,
                                         dueTime = dueTime,
                                         repeatOption = repeatOption,
-                                        subTasks = editableSubTasks.toList()
+                                        notificationsEnabled = notificationsEnabled,
+                                        subTasks = editableSubTasks.toList(),
+                                        attachments = editableAttachments.toList()
                                     )
                                 )
                             }
@@ -479,6 +575,45 @@ private fun InfoButton(
         Text(
             text = value,
             color = DarkFont,
+            fontSize = 14.sp,
+            fontFamily = PixelFont,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun ToggleInfoButton(
+    label: String,
+    value: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = if (selected) AlGreen else BgUnselectedElement,
+                shape = RoundedCornerShape(12.dp)
+            )
+            .clickable {
+                onClick()
+            }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = label,
+            color = IconGray,
+            fontSize = 13.sp,
+            fontFamily = PixelFont,
+            fontWeight = FontWeight.Medium
+        )
+
+        Text(
+            text = value,
+            color = if (selected) DkGreen else DarkFont,
             fontSize = 14.sp,
             fontFamily = PixelFont,
             fontWeight = FontWeight.SemiBold,
@@ -685,4 +820,30 @@ private fun formatTaskDate(
     } catch (_: Exception) {
         dueDate
     }
+}
+
+private fun Uri.toEditorAttachment(context: Context): Attachment {
+    val mimeType = context.contentResolver.getType(this).orEmpty()
+    val attachmentType = when {
+        mimeType.startsWith("image/") -> AttachmentType.IMAGE
+        mimeType.startsWith("video/") -> AttachmentType.VIDEO
+        mimeType == "application/pdf" || mimeType.startsWith("text/") -> AttachmentType.DOCUMENT
+        else -> AttachmentType.FILE
+    }
+
+    return Attachment(
+        id = UUID.randomUUID().toString(),
+        type = attachmentType,
+        uri = toString(),
+        name = resolveEditorDisplayName(context) ?: lastPathSegment ?: "Adjunto"
+    )
+}
+
+private fun Uri.resolveEditorDisplayName(context: Context): String? {
+    return runCatching {
+        context.contentResolver.query(this, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (nameIndex >= 0 && cursor.moveToFirst()) cursor.getString(nameIndex) else null
+        }
+    }.getOrNull()
 }
