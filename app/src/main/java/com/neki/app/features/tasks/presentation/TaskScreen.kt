@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,11 +37,12 @@ import com.neki.app.R
 import com.neki.app.features.tasks.domain.Priority
 import com.neki.app.features.tasks.domain.RepeatOption
 import com.neki.app.features.tasks.domain.SubTask
+import com.neki.app.ui.theme.BgColor
+import com.neki.app.ui.theme.IconGray
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
-import androidx.compose.foundation.background
-import com.neki.app.ui.theme.BgColor
+
 @Composable
 fun TaskScreen(
     taskViewModel: TaskViewModel = viewModel()
@@ -106,58 +107,108 @@ fun TaskScreen(
         matchesSearch && matchesDate
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(BgColor)
-            .padding(bottom = 120.dp)
     ) {
-        TaskTopSection(
-            searchQuery = searchQuery,
-            onSearchQueryChange = {
-                searchQuery = it
-            },
-            today = today,
-            activeDateFilter = selectedCalendarDate,
-            onDateSelected = { date ->
-                selectedCalendarDate = if (selectedCalendarDate == date) {
-                    null
-                } else {
-                    date
-                }
-            },
-            modifier = Modifier.padding(top = 32.dp)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Box(
-            modifier = Modifier.weight(1f)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 150.dp)
         ) {
-            if (filteredTasks.isEmpty()) {
-                EmptyTaskState(
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 24.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(filteredTasks) { task ->
-                        TaskCard(
-                            task = task,
-                            onToggleComplete = {
-                                taskViewModel.toggleTaskCompletion(task.id)
-                            },
-                            onDelete = {
-                                taskViewModel.deleteTask(task.id)
-                            },
-                            onEdit = {
-                                taskViewModel.selectTask(task)
-                            }
-                        )
+            TaskTopSection(
+                searchQuery = searchQuery,
+                onSearchQueryChange = {
+                    searchQuery = it
+                },
+                today = today,
+                activeDateFilter = selectedCalendarDate,
+                onDateSelected = { date ->
+                    selectedCalendarDate = if (selectedCalendarDate == date) {
+                        null
+                    } else {
+                        date
+                    }
+                },
+                modifier = Modifier.padding(top = 48.dp)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Box(
+                modifier = Modifier.weight(1f)
+            ) {
+                if (filteredTasks.isEmpty()) {
+                    EmptyTaskState(
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(
+                            start = 24.dp,
+                            end = 24.dp,
+                            bottom = 18.dp
+                        ),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(filteredTasks) { task ->
+                            TaskCard(
+                                task = task,
+                                onToggleComplete = {
+                                    taskViewModel.toggleTaskCompletion(task.id)
+                                },
+                                onDelete = {
+                                    taskViewModel.deleteTask(task.id)
+                                },
+                                onEdit = {
+                                    taskViewModel.selectTask(task)
+                                }
+                            )
+                        }
                     }
                 }
+            }
+        }
+
+        if (isExpanded) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(
+                        start = 24.dp,
+                        end = 24.dp,
+                        bottom = 152.dp
+                    )
+            ) {
+                ExpandedTaskComposer(
+                    selectedPriority = selectedPriority,
+                    selectedGroup = selectedGroup,
+                    availableGroups = taskViewModel.availableGroups,
+                    subTasks = subTasks,
+                    selectedDueDate = selectedDueDate,
+                    onPrioritySelected = {
+                        selectedPriority = it
+                    },
+                    onGroupSelected = {
+                        selectedGroup = it
+                    },
+                    onDateClick = {
+                        showDateSheet = true
+                    },
+                    onCreateGroup = { groupName ->
+                        taskViewModel.createGroup(groupName)
+                    },
+                    onAddSubTask = { title ->
+                        subTasks = subTasks + SubTask(
+                            id = UUID.randomUUID().toString(),
+                            title = title
+                        )
+                    },
+                    onRemoveSubTask = { subTask ->
+                        subTasks = subTasks - subTask
+                    }
+                )
             }
         }
 
@@ -182,42 +233,15 @@ fun TaskScreen(
                 selectedDueDate = null
                 selectedDueTime = null
                 selectedRepeatOption = RepeatOption.NONE
+                isExpanded = false
             },
             onExpandClick = {
                 isExpanded = !isExpanded
-            }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 118.dp)
         )
-
-        if (isExpanded) {
-            ExpandedTaskComposer(
-                selectedPriority = selectedPriority,
-                selectedGroup = selectedGroup,
-                availableGroups = taskViewModel.availableGroups,
-                subTasks = subTasks,
-                selectedDueDate = selectedDueDate,
-                onPrioritySelected = {
-                    selectedPriority = it
-                },
-                onGroupSelected = {
-                    selectedGroup = it
-                },
-                onDateClick = {
-                    showDateSheet = true
-                },
-                onCreateGroup = { groupName ->
-                    taskViewModel.createGroup(groupName)
-                },
-                onAddSubTask = { title ->
-                    subTasks = subTasks + SubTask(
-                        id = UUID.randomUUID().toString(),
-                        title = title
-                    )
-                },
-                onRemoveSubTask = { subTask ->
-                    subTasks = subTasks - subTask
-                }
-            )
-        }
 
         if (showDateSheet) {
             DateSelectorSheet(
@@ -240,8 +264,12 @@ fun TaskScreen(
         taskViewModel.selectedTask?.let { selectedTask ->
             TaskEditorScreen(
                 task = selectedTask,
-                onSave = { newTitle ->
-                    taskViewModel.updateTaskTitle(newTitle)
+                onSave = { updatedTask ->
+                    taskViewModel.updateTask(updatedTask)
+                    taskViewModel.clearSelectedTask()
+                },
+                onDelete = {
+                    taskViewModel.deleteTask(selectedTask.id)
                     taskViewModel.clearSelectedTask()
                 },
                 onDismiss = {
@@ -306,7 +334,7 @@ private fun EmptyTaskState(
 
             Text(
                 text = "Add task",
-                color = Color(0xFF6F7568),
+                color = IconGray,
                 fontSize = 16.sp
             )
         }

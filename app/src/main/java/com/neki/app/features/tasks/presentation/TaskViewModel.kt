@@ -143,6 +143,17 @@ class TaskViewModel : ViewModel() {
         }
     }
 
+    fun updateTask(updatedTask: Task) {
+        val index = tasks.indexOfFirst { it.id == updatedTask.id }
+
+        if (index != -1) {
+            tasks[index] = updatedTask.copy(
+                updatedAt = System.currentTimeMillis()
+            )
+            selectedTask = tasks[index]
+        }
+    }
+
     fun createGroup(name: String): TaskGroup {
         val existingGroup = availableGroups.find {
             it.name.equals(name, ignoreCase = true)

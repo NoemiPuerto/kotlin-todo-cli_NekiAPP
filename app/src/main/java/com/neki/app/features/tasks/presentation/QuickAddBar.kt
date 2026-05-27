@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Card
@@ -28,6 +29,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.neki.app.R
+import com.neki.app.ui.theme.BgSelectedElement
+import com.neki.app.ui.theme.DkGreen
+import com.neki.app.ui.theme.IconGray
+import com.neki.app.ui.theme.LgGreen
 
 private val PixelFont = FontFamily(
     Font(R.font.pixelify_regular, FontWeight.Normal),
@@ -41,47 +46,48 @@ fun QuickAddBar(
     taskTitle: String,
     onTaskTitleChange: (String) -> Unit,
     onCreateClick: () -> Unit,
-    onExpandClick: () -> Unit
+    onExpandClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 28.dp, vertical = 10.dp),
-        shape = RoundedCornerShape(14.dp),
+            .padding(horizontal = 24.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = BgSelectedElement
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 3.dp
+            defaultElevation = 6.dp
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(72.dp)
-                .padding(horizontal = 18.dp),
+                .height(64.dp)
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(
                 painter = painterResource(id = R.drawable.ic_plus_box),
                 contentDescription = "Agregar tarea",
-                colorFilter = ColorFilter.tint(Color(0xFF8B9D77)),
+                colorFilter = ColorFilter.tint(LgGreen),
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(27.dp)
                     .clickable {
                         onExpandClick()
                     }
             )
 
-            Spacer(modifier = Modifier.size(22.dp))
+            Spacer(modifier = Modifier.width(18.dp))
 
             BasicTextField(
                 value = taskTitle,
                 onValueChange = onTaskTitleChange,
                 singleLine = true,
                 textStyle = TextStyle(
-                    color = Color(0xFF777D72),
-                    fontSize = 18.sp,
+                    color = DkGreen,
+                    fontSize = 17.sp,
                     fontFamily = PixelFont,
                     fontWeight = FontWeight.Normal
                 ),
@@ -93,10 +99,11 @@ fun QuickAddBar(
                         if (taskTitle.isBlank()) {
                             Text(
                                 text = "Añadir nueva tarea",
-                                color = Color(0xFFB5B8B1),
-                                fontSize = 18.sp,
+                                color = IconGray.copy(alpha = 0.55f),
+                                fontSize = 17.sp,
                                 fontFamily = PixelFont,
-                                fontWeight = FontWeight.Normal
+                                fontWeight = FontWeight.Normal,
+                                maxLines = 1
                             )
                         }
 
@@ -105,14 +112,14 @@ fun QuickAddBar(
                 }
             )
 
-            Spacer(modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             Box(
                 modifier = Modifier
-                    .size(width = 116.dp, height = 52.dp)
+                    .size(width = 104.dp, height = 46.dp)
                     .background(
-                        color = Color(0xFF8B9D77),
-                        shape = RoundedCornerShape(12.dp)
+                        color = LgGreen,
+                        shape = RoundedCornerShape(11.dp)
                     )
                     .clickable {
                         if (taskTitle.isNotBlank()) {
@@ -124,9 +131,10 @@ fun QuickAddBar(
                 Text(
                     text = "Crear",
                     color = Color.White,
-                    fontSize = 18.sp,
+                    fontSize = 17.sp,
                     fontFamily = PixelFont,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1
                 )
             }
         }

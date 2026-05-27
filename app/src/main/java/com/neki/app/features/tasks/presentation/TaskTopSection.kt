@@ -1,3 +1,5 @@
+@file:Suppress("SpellCheckingInspection")
+
 package com.neki.app.features.tasks.presentation
 
 import androidx.compose.foundation.Image
@@ -16,13 +18,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -32,6 +30,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.neki.app.R
+import com.neki.app.ui.theme.AlGreen
+import com.neki.app.ui.theme.BgBoxElements
+import com.neki.app.ui.theme.BgSelectedElement
+import com.neki.app.ui.theme.DkGreen
+import com.neki.app.ui.theme.IconGray
 import java.time.LocalDate
 
 private val PixelFont = FontFamily(
@@ -64,7 +67,7 @@ fun TaskTopSection(
 
         Text(
             text = "Hoy",
-            color = Color(0xFF48623F),
+            color = DkGreen,
             fontSize = 24.sp,
             fontFamily = PixelFont,
             fontWeight = FontWeight.SemiBold
@@ -90,7 +93,7 @@ private fun SearchTaskBar(
             .fillMaxWidth()
             .height(46.dp)
             .background(
-                color = Color.White,
+                color = BgSelectedElement,
                 shape = RoundedCornerShape(8.dp)
             )
             .padding(horizontal = 16.dp),
@@ -99,7 +102,7 @@ private fun SearchTaskBar(
         Image(
             painter = painterResource(id = R.drawable.ic_search),
             contentDescription = "Buscar tareas",
-            colorFilter = ColorFilter.tint(Color(0xFF7D8478)),
+            colorFilter = ColorFilter.tint(IconGray),
             modifier = Modifier.size(18.dp)
         )
 
@@ -110,7 +113,7 @@ private fun SearchTaskBar(
             onValueChange = onValueChange,
             singleLine = true,
             textStyle = TextStyle(
-                color = Color(0xFF5E665A),
+                color = DkGreen,
                 fontSize = 14.sp,
                 fontFamily = PixelFont,
                 fontWeight = FontWeight.Normal
@@ -123,7 +126,7 @@ private fun SearchTaskBar(
                     if (value.isBlank()) {
                         Text(
                             text = "Search tasks...",
-                            color = Color(0xFF9B9F98),
+                            color = IconGray.copy(alpha = 0.65f),
                             fontSize = 14.sp,
                             fontFamily = PixelFont,
                             fontWeight = FontWeight.Normal
@@ -143,15 +146,13 @@ private fun MiniCalendar(
     activeDateFilter: LocalDate?,
     onDateSelected: (LocalDate) -> Unit
 ) {
-    var visibleWeekStart by remember {
-        mutableStateOf(
-            today.minusDays((today.dayOfWeek.value - 1).toLong())
-        )
+    val weekStart = remember(today) {
+        today.minusDays((today.dayOfWeek.value - 1).toLong())
     }
 
-    val days = remember(visibleWeekStart) {
+    val days = remember(weekStart) {
         (0..6).map { index ->
-            val date = visibleWeekStart.plusDays(index.toLong())
+            val date = weekStart.plusDays(index.toLong())
 
             CalendarDay(
                 letter = when (date.dayOfWeek.value) {
@@ -169,73 +170,19 @@ private fun MiniCalendar(
         }
     }
 
-    val monthTitle = remember(visibleWeekStart) {
-        val endOfWeek = visibleWeekStart.plusDays(6)
-
-        if (visibleWeekStart.monthValue == endOfWeek.monthValue) {
-            "${getSpanishMonthName(visibleWeekStart.monthValue)} ${visibleWeekStart.year}"
-        } else {
-            "${getSpanishMonthName(visibleWeekStart.monthValue)} - ${getSpanishMonthName(endOfWeek.monthValue)} ${endOfWeek.year}"
-        }
-    }
-
-    Column(
-        modifier = Modifier.fillMaxWidth()
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "<",
-                color = Color(0xFF48623F),
-                fontSize = 22.sp,
-                fontFamily = PixelFont,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clickable {
-                    visibleWeekStart = visibleWeekStart.minusDays(7)
+        days.forEach { day ->
+            CalendarDayItem(
+                day = day,
+                selected = day.date == activeDateFilter || day.date == today && activeDateFilter == null,
+                isFiltering = activeDateFilter != null,
+                onClick = {
+                    onDateSelected(day.date)
                 }
             )
-
-            Text(
-                text = monthTitle,
-                color = Color(0xFF48623F),
-                fontSize = 16.sp,
-                fontFamily = PixelFont,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Text(
-                text = ">",
-                color = Color(0xFF48623F),
-                fontSize = 22.sp,
-                fontFamily = PixelFont,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clickable {
-                    visibleWeekStart = visibleWeekStart.plusDays(7)
-                }
-            )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            days.forEach { day ->
-                CalendarDayItem(
-                    day = day,
-                    selected = day.date == activeDateFilter || day.date == today && activeDateFilter == null,
-                    isFiltering = activeDateFilter != null,
-                    onClick = {
-                        onDateSelected(day.date)
-                    }
-                )
-            }
         }
     }
 }
@@ -248,15 +195,15 @@ private fun CalendarDayItem(
     onClick: () -> Unit
 ) {
     val backgroundColor = if (selected) {
-        Color(0xFFD7E9C3)
+        AlGreen
     } else {
-        Color(0xFFE7E4DA)
+        BgBoxElements
     }
 
     val textColor = if (selected) {
-        Color(0xFF48623F)
+        DkGreen
     } else {
-        Color(0xFF777D72)
+        IconGray
     }
 
     val itemAlpha = if (selected || !isFiltering) {
@@ -295,23 +242,6 @@ private fun CalendarDayItem(
             fontFamily = PixelFont,
             fontWeight = FontWeight.Normal
         )
-    }
-}
-
-private fun getSpanishMonthName(month: Int): String {
-    return when (month) {
-        1 -> "Enero"
-        2 -> "Febrero"
-        3 -> "Marzo"
-        4 -> "Abril"
-        5 -> "Mayo"
-        6 -> "Junio"
-        7 -> "Julio"
-        8 -> "Agosto"
-        9 -> "Septiembre"
-        10 -> "Octubre"
-        11 -> "Noviembre"
-        else -> "Diciembre"
     }
 }
 

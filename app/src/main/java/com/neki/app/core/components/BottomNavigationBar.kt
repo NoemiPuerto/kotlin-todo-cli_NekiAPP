@@ -63,8 +63,8 @@ private fun BottomNavButton(
 ) {
     Box(
         modifier = Modifier
-            .size(70.dp)
-            .clip(RoundedCornerShape(18.dp))
+            .size(58.dp)
+            .clip(RoundedCornerShape(16.dp))
             .background(
                 if (isSelected) {
                     DkGreen
@@ -80,7 +80,7 @@ private fun BottomNavButton(
         Icon(
             painter = painterResource(id = item.iconRes),
             contentDescription = item.label,
-            modifier = Modifier.size(32.dp),
+            modifier = Modifier.size(24.dp),
             tint = if (isSelected) {
                 Color.White
             } else {
